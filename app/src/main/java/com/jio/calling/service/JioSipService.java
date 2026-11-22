@@ -159,7 +159,6 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     }
 
     private synchronized void loadOrDiscoverAccount(boolean force) {
-        checkAndSwitchToJioWifi();
 
         // Discover router on Wi-Fi to verify target extension MAC
         RouterInfo info = JioRouterDiscovery.discover(this);
@@ -183,7 +182,12 @@ public class JioSipService extends Service implements JioRegistrationListener, J
         }
 
         // Auto-provision via router
-        String host = (info != null && info.getHost() != null && !info.getHost().isEmpty()) ? info.getHost() : "192.168.29.1";
+        if (info == null || info.getHost() == null || info.getHost().isEmpty()) {
+            Log.e(TAG, "No router discovered! Cannot proceed with provisioning.");
+            return;
+        }
+
+        String host = info.getHost();
         try {
             Log.i(TAG, "Auto-provisioning via Zero-OTP bypass from " + host + " using MAC: " + targetMac);
             JioAccount newAccount = JioProvisioningClient.acquireCredentialsZeroOtp(host, targetMac);
@@ -196,29 +200,6 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             }
         } catch (Exception e) {
             Log.e(TAG, "Auto-provisioning failed: " + e.getMessage(), e);
-        }
-    }
-
-    private void checkAndSwitchToJioWifi() {
-        try {
-            // If the router is already reachable (e.g. over NetBird VPN, Ethernet, or current Wi-Fi),
-            // do not disrupt the connection by attempting to switch SSIDs.
-            if (isRouterReachable("192.168.29.1")) {
-                Log.i(TAG, "Jio router 192.168.29.1 is already reachable; skipping Wi-Fi switch.");
-                return;
-            }
-
-            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            if (wm == null || !wm.isWifiEnabled()) return;
-            android.net.DhcpInfo dhcp = wm.getDhcpInfo();
-            int gateway = dhcp != null ? dhcp.gateway : 0;
-            String gwIp = String.format("%d.%d.%d.%d", (gateway & 0xFF), (gateway >> 8 & 0xFF), (gateway >> 16 & 0xFF), (gateway >> 24 & 0xFF));
-            if (!gwIp.startsWith("192.168.29.")) {
-                Log.i(TAG, "Current Wi-Fi gateway is " + gwIp + " (not 192.168.29.1). Checking if JioFiber Wi-Fi is configured...");
-                switchToWifi("Arnab-Home-JF");
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Wi-Fi gateway check failed: " + e.getMessage());
         }
     }
 
