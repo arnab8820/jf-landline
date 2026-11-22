@@ -221,9 +221,9 @@ Pairs a new companion client using the 4-digit PIN displayed on the gateway scre
 ```
 
 #### `POST /api/call`
-Initiates an outbound landline call. Requires `X-Gateway-Token` header.
+Initiates an outbound landline call. Requires `Authorization` header.
 ```json
-// Headers: X-Gateway-Token: <token>
+// Headers: Authorization: "Bearer <token>"
 // Request
 {
   "number": "+919876543210"
@@ -237,9 +237,9 @@ Initiates an outbound landline call. Requires `X-Gateway-Token` header.
 ```
 
 #### `POST /api/hangup`
-Terminates the active landline call. Requires `X-Gateway-Token` header.
+Terminates the active landline call. Requires `Authorization` header.
 ```json
-// Headers: X-Gateway-Token: <token>
+// Headers: Authorization: "Bearer <token>"
 // Response (200 OK)
 {
   "status": "HANGUP_REQUESTED"
