@@ -79,4 +79,18 @@ public class AppPreferences {
     public static void setEmergencyExclusionEnabled(Context context, boolean enabled) {
         getPrefs(context).edit().putBoolean(KEY_EXCLUDE_EMERGENCY, enabled).apply();
     }
+
+    private static final String KEY_TARGET_WIFI_SSID = "target_wifi_ssid";
+
+    /**
+     * User-configured preferred home JioFiber Wi-Fi SSID.
+     * If empty, the app scans configured networks for any known JioFiber network.
+     */
+    public static String getTargetWifiSsid(Context context) {
+        return getPrefs(context).getString(KEY_TARGET_WIFI_SSID, "");
+    }
+
+    public static void setTargetWifiSsid(Context context, String ssid) {
+        getPrefs(context).edit().putString(KEY_TARGET_WIFI_SSID, ssid != null ? ssid : "").apply();
+    }
 }

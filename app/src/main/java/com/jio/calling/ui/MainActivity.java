@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
         if (account != null && account.isValid()) {
             String num = account.getMsisdn();
             if (num != null && num.length() == 10) {
-                // Format: 033-31628760 or similar
+                // Format: e.g. 033-XXXXXXXX or similar
                 tvPhoneNumber.setText(num.substring(0, 3) + "-" + num.substring(3));
             } else {
                 tvPhoneNumber.setText(num != null ? num : "Active Line");

@@ -573,15 +573,30 @@ public class JioSipManager {
             // P-Preferred-Identity (must exactly match From header public ID with +91)
             String fullPubId = currentAccount.getIdUri();
             if (fullPubId == null || fullPubId.isEmpty()) {
-                fullPubId = "sip:+913331628760@" + realm;
+                String msisdn = currentAccount.getMsisdn();
+                if (msisdn != null && !msisdn.isEmpty()) {
+                    String cleanMsisdn = msisdn.replaceAll("[^0-9]", "");
+                    if (cleanMsisdn.startsWith("0")) {
+                        cleanMsisdn = "91" + cleanMsisdn.substring(1);
+                    } else if (!cleanMsisdn.startsWith("91")) {
+                        cleanMsisdn = "91" + cleanMsisdn;
+                    }
+                    fullPubId = "sip:+" + cleanMsisdn + "@" + realm;
+                } else if (currentAccount.getUsername() != null && !currentAccount.getUsername().isEmpty()) {
+                    String user = currentAccount.getUsername();
+                    if (!user.startsWith("+")) user = "+" + user;
+                    fullPubId = "sip:" + user;
+                }
             }
-            if (!fullPubId.startsWith("<")) {
-                fullPubId = "<" + fullPubId + ">";
+            if (fullPubId != null && !fullPubId.isEmpty()) {
+                if (!fullPubId.startsWith("<")) {
+                    fullPubId = "<" + fullPubId + ">";
+                }
+                SipHeader ppiHdr = new SipHeader();
+                ppiHdr.setHName("P-Preferred-Identity");
+                ppiHdr.setHValue(fullPubId);
+                prm.getTxOption().getHeaders().add(ppiHdr);
             }
-            SipHeader ppiHdr = new SipHeader();
-            ppiHdr.setHName("P-Preferred-Identity");
-            ppiHdr.setHValue(fullPubId);
-            prm.getTxOption().getHeaders().add(ppiHdr);
 
             // NOTE: Do NOT add duplicate Supported headers or P-Preferred-Identity headers.
             // AccountConfig manages 100rel, timer, replaces, and outbound automatically.
@@ -618,7 +633,7 @@ public class JioSipManager {
         else if (clean.length() == 10 && clean.startsWith("33")) {
             clean = "0" + clean;
         }
-        // 8-digit Kolkata local landline (e.g. 31628760) -> prefix with 033
+        // 8-digit Kolkata local landline (e.g. 23456789) -> prefix with 033
         else if (clean.length() == 8 && clean.matches("^[2-9][0-9]{7}$")) {
             clean = "033" + clean;
         }

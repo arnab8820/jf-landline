@@ -21,6 +21,8 @@ import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
+import java.util.Locale;
+
 import com.jio.calling.gateway.GatewayDiscoveryBroadcaster;
 import com.jio.calling.gateway.GatewayServer;
 import com.jio.calling.model.JioAccount;
@@ -109,10 +111,17 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             } else if (ACTION_SWITCH_WIFI.equals(action)) {
                 String targetSsid = intent.getStringExtra(EXTRA_SSID);
                 if (targetSsid == null || targetSsid.isEmpty()) {
-                    targetSsid = "Arnab-Home-JF";
+                    targetSsid = AppPreferences.getTargetWifiSsid(this);
                 }
-                boolean switched = switchToWifi(targetSsid);
-                Log.i(TAG, "ACTION_SWITCH_WIFI target=" + targetSsid + " result=" + switched);
+                if (targetSsid != null && !targetSsid.isEmpty()) {
+                    boolean switched = switchToWifi(targetSsid);
+                    Log.i(TAG, "ACTION_SWITCH_WIFI target=" + targetSsid + " result=" + switched);
+                } else {
+                    WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    if (wm != null) {
+                        findAndSwitchToJioNetwork(wm);
+                    }
+                }
                 return START_STICKY;
             } else if (ACTION_MAKE_CALL.equals(action)) {
                 String number = intent.getStringExtra(EXTRA_PHONE_NUMBER);
@@ -215,7 +224,12 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             String gwIp = String.format("%d.%d.%d.%d", (gateway & 0xFF), (gateway >> 8 & 0xFF), (gateway >> 16 & 0xFF), (gateway >> 24 & 0xFF));
             if (!gwIp.startsWith("192.168.29.")) {
                 Log.i(TAG, "Current Wi-Fi gateway is " + gwIp + " (not 192.168.29.1). Checking if JioFiber Wi-Fi is configured...");
-                switchToWifi("Arnab-Home-JF");
+                String targetSsid = AppPreferences.getTargetWifiSsid(this);
+                if (targetSsid != null && !targetSsid.isEmpty()) {
+                    switchToWifi(targetSsid);
+                } else {
+                    findAndSwitchToJioNetwork(wm);
+                }
             }
         } catch (Exception e) {
             Log.w(TAG, "Wi-Fi gateway check failed: " + e.getMessage());
@@ -270,6 +284,26 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             Log.w(TAG, "Target Wi-Fi SSID not found in configured networks: " + targetSsid);
         } catch (Exception e) {
             Log.e(TAG, "Error switching Wi-Fi: " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    private boolean findAndSwitchToJioNetwork(WifiManager wm) {
+        try {
+            java.util.List<android.net.wifi.WifiConfiguration> configs = wm.getConfiguredNetworks();
+            if (configs != null) {
+                for (android.net.wifi.WifiConfiguration c : configs) {
+                    if (c.SSID != null) {
+                        String cleanSsid = c.SSID.replace("\"", "");
+                        if (cleanSsid.toLowerCase(Locale.US).contains("jio")) {
+                            Log.i(TAG, "Found configured Jio Wi-Fi network: " + cleanSsid);
+                            return switchToWifi(cleanSsid);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error searching configured Jio networks: " + e.getMessage());
         }
         return false;
     }
